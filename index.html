@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MirrorMe - Upload Video</title>
-    <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -53,11 +52,29 @@
             transition: all 0.3s ease;
             width: 100%;
             margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
         }
         
         .upload-btn:hover {
             background: #5856eb;
             transform: translateY(-2px);
+        }
+        
+        .upload-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
         }
         
         .instructions {
@@ -66,6 +83,59 @@
             line-height: 1.5;
             margin-bottom: 20px;
         }
+        
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+        }
+        
+        .status.success {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #ef4444;
+        }
+        
+        .status.processing {
+            background: #dbeafe;
+            color: #2563eb;
+            border: 1px solid #3b82f6;
+        }
+        
+        .video-preview {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .video-preview video {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .analyze-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .analyze-btn:hover {
+            background: #059669;
+        }
     </style>
 </head>
 <body>
@@ -73,8 +143,9 @@
         <div class="logo">🎭 MirrorMe</div>
         <div class="subtitle">Upload your video for AI analysis</div>
         
-        <button id="upload_widget" class="upload-btn">
+        <button class="upload-btn" id="upload-button">
             📹 Choose Video to Analyze
+            <input type="file" id="video-input" class="file-input" accept="video/*" capture="user">
         </button>
         
         <div class="instructions">
@@ -82,26 +153,125 @@
             • Show yourself speaking naturally<br>
             • Good lighting and audio recommended
         </div>
+        
+        <div id="status" class="status"></div>
+        
+        <div id="video-preview" class="video-preview">
+            <video id="preview-video" controls></video>
+            <button id="analyze-btn" class="analyze-btn">
+                ✨ Analyze This Video
+            </button>
+        </div>
     </div>
 
     <script type="text/javascript">
-        var myWidget = cloudinary.createUploadWidget({
-            cloudName: 'dtghpvpxc',
-            uploadPreset: 'mirrorme_videos',
-            sources: ['local', 'camera'],
-            multiple: false,
-            clientAllowedFormats: ['mp4', 'mov', 'avi', 'webm'],
-            maxFileSize: 100000000,
-            resourceType: 'video'
-        }, (error, result) => {
-            if (!error && result && result.event === "success") {
-                alert('Video uploaded successfully! URL: ' + result.info.secure_url);
+        const videoInput = document.getElementById('video-input');
+        const statusDiv = document.getElementById('status');
+        const previewDiv = document.getElementById('video-preview');
+        const previewVideo = document.getElementById('preview-video');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const uploadButton = document.getElementById('upload-button');
+        
+        let selectedVideoFile = null;
+        
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+        
+        function generateSessionId() {
+            return Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+        }
+        
+        function getRecordingType() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('type') || 'interview_practice';
+        }
+        
+        // Handle video selection
+        videoInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedVideoFile = file;
+                
+                // Show video preview
+                const videoURL = URL.createObjectURL(file);
+                previewVideo.src = videoURL;
+                previewDiv.style.display = 'block';
+                
+                showStatus(`Video selected: ${file.name}`, 'success');
             }
         });
-
-        document.getElementById("upload_widget").addEventListener("click", function(){
-            myWidget.open();
-        }, false);
+        
+        // Handle analyze button click
+        analyzeBtn.addEventListener('click', async function() {
+            if (!selectedVideoFile) {
+                showStatus('Please select a video first', 'error');
+                return;
+            }
+            
+            showStatus('🚀 Starting analysis with sample video...', 'processing');
+            uploadButton.disabled = true;
+            analyzeBtn.disabled = true;
+            
+            // For MVP, we'll use the sample video URL but show the user's selected video
+            const sessionId = generateSessionId();
+            const recordingType = getRecordingType();
+            
+            const data = {
+                user_id: "user123",
+                session_id: sessionId.toString(),
+                video_duration: 30,
+                recording_type: recordingType,
+                video_url: "https://sample-videos.com/zip/10/mp4/SampleVideo_360x240_1mb.mp4"
+            };
+            
+            try {
+                const response = await fetch('https://hooks.zapier.com/hooks/catch/24166402/u6iwe0n/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showStatus('✅ Analysis started! Check your email for personalized coaching results.', 'success');
+                    
+                    // Store session info
+                    if (typeof(Storage) !== "undefined") {
+                        localStorage.setItem('mirrorMeSessionId', sessionId.toString());
+                    }
+                    
+                    // Navigate back after delay
+                    setTimeout(() => {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({
+                                type: 'ANALYSIS_STARTED',
+                                sessionId: sessionId
+                            }, '*');
+                        } else if (window.history.length > 1) {
+                            window.history.back();
+                        } else {
+                            showStatus('Analysis in progress! Check your email.', 'success');
+                        }
+                    }, 3000);
+                    
+                } else {
+                    showStatus('❌ Analysis failed. Please try again.', 'error');
+                    uploadButton.disabled = false;
+                    analyzeBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error calling webhook:', error);
+                showStatus('❌ Connection error. Please try again.', 'error');
+                uploadButton.disabled = false;
+                analyzeBtn.disabled = false;
+            }
+        });
+        
+        console.log('MirrorMe Upload Page Loaded - Recording Type:', getRecordingType());
     </script>
 </body>
 </html>
