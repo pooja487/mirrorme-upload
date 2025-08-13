@@ -1,0 +1,294 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+    <meta charset="UTF-8">\
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <title>MirrorMe - Upload Video</title>\
+    <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>\
+    <style>\
+        body \{\
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);\
+            margin: 0;\
+            padding: 20px;\
+            min-height: 100vh;\
+            display: flex;\
+            flex-direction: column;\
+            align-items: center;\
+            justify-content: center;\
+        \}\
+        \
+        .upload-container \{\
+            background: white;\
+            border-radius: 16px;\
+            padding: 40px;\
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);\
+            text-align: center;\
+            max-width: 500px;\
+            width: 100%;\
+        \}\
+        \
+        .logo \{\
+            font-size: 32px;\
+            font-weight: bold;\
+            color: #6366f1;\
+            margin-bottom: 10px;\
+        \}\
+        \
+        .subtitle \{\
+            color: #666;\
+            margin-bottom: 30px;\
+            font-size: 16px;\
+        \}\
+        \
+        .upload-btn \{\
+            background: #6366f1;\
+            color: white;\
+            border: none;\
+            padding: 16px 32px;\
+            border-radius: 12px;\
+            font-size: 18px;\
+            font-weight: 600;\
+            cursor: pointer;\
+            transition: all 0.3s ease;\
+            width: 100%;\
+            margin-bottom: 20px;\
+        \}\
+        \
+        .upload-btn:hover \{\
+            background: #5856eb;\
+            transform: translateY(-2px);\
+        \}\
+        \
+        .instructions \{\
+            color: #666;\
+            font-size: 14px;\
+            line-height: 1.5;\
+            margin-bottom: 20px;\
+        \}\
+        \
+        .status \{\
+            margin-top: 20px;\
+            padding: 12px;\
+            border-radius: 8px;\
+            font-weight: 500;\
+            display: none;\
+        \}\
+        \
+        .status.success \{\
+            background: #ecfdf5;\
+            color: #059669;\
+            border: 1px solid #10b981;\
+        \}\
+        \
+        .status.error \{\
+            background: #fef2f2;\
+            color: #dc2626;\
+            border: 1px solid #ef4444;\
+        \}\
+        \
+        .status.uploading \{\
+            background: #dbeafe;\
+            color: #2563eb;\
+            border: 1px solid #3b82f6;\
+        \}\
+        \
+        .video-preview \{\
+            margin-top: 20px;\
+            display: none;\
+        \}\
+        \
+        .video-preview video \{\
+            width: 100%;\
+            max-width: 300px;\
+            border-radius: 8px;\
+        \}\
+        \
+        .continue-btn \{\
+            background: #10b981;\
+            color: white;\
+            border: none;\
+            padding: 12px 24px;\
+            border-radius: 8px;\
+            font-size: 16px;\
+            font-weight: 600;\
+            cursor: pointer;\
+            margin-top: 15px;\
+            display: none;\
+        \}\
+        \
+        .continue-btn:hover \{\
+            background: #059669;\
+        \}\
+    </style>\
+</head>\
+<body>\
+    <div class="upload-container">\
+        <div class="logo">\uc0\u55356 \u57261  MirrorMe</div>\
+        <div class="subtitle">Upload your video for AI analysis</div>\
+        \
+        <button id="upload_widget" class="upload-btn">\
+            \uc0\u55357 \u56569  Choose Video to Analyze\
+        </button>\
+        \
+        <div class="instructions">\
+            \'95 Record or select a 30-60 second video<br>\
+            \'95 Show yourself speaking naturally<br>\
+            \'95 Good lighting and audio recommended\
+        </div>\
+        \
+        <div id="status" class="status"></div>\
+        \
+        <div id="video-preview" class="video-preview">\
+            <video id="preview-video" controls></video>\
+            <br>\
+            <button id="continue-btn" class="continue-btn">\
+                \uc0\u10024  Analyze This Video\
+            </button>\
+        </div>\
+    </div>\
+\
+    <script type="text/javascript">\
+        let uploadedVideoUrl = '';\
+        \
+        // Initialize Cloudinary Upload Widget\
+        var myWidget = cloudinary.createUploadWidget(\{\
+            cloudName: 'dtghpvpxc',\
+            uploadPreset: 'mirrorme_videos',\
+            sources: ['local', 'camera'],\
+            multiple: false,\
+            clientAllowedFormats: ['mp4', 'mov', 'avi', 'webm', 'mkv'],\
+            maxFileSize: 100000000, // 100MB limit\
+            maxVideoFileSize: 100000000,\
+            resourceType: 'video',\
+            cropping: false,\
+            showAdvancedOptions: false,\
+            showSkipCropButton: true,\
+            showUploadMoreButton: false,\
+            theme: 'purple',\
+            styles: \{\
+                palette: \{\
+                    window: '#FFFFFF',\
+                    windowBorder: '#6366F1',\
+                    tabIcon: '#6366F1',\
+                    menuIcons: '#6366F1',\
+                    textDark: '#000000',\
+                    textLight: '#FFFFFF',\
+                    link: '#6366F1',\
+                    action: '#6366F1',\
+                    inactiveTabIcon: '#999999',\
+                    error: '#F44235',\
+                    inProgress: '#6366F1',\
+                    complete: '#10B981',\
+                    sourceBg: '#F8F9FA'\
+                \}\
+            \},\
+            text: \{\
+                en: \{\
+                    or: 'or',\
+                    back: 'Back',\
+                    advanced: 'Advanced',\
+                    close: 'Close',\
+                    no_results: 'No Results',\
+                    search_placeholder: 'Search files',\
+                    about_uw: 'About Upload Widget',\
+                    menu: \{\
+                        files: 'My Files',\
+                        web: 'Web Address',\
+                        camera: 'Camera',\
+                        gsearch: 'Image Search',\
+                        gdrive: 'Google Drive',\
+                        dropbox: 'Dropbox',\
+                        facebook: 'Facebook',\
+                        instagram: 'Instagram'\
+                    \},\
+                    selection_counter: \{\
+                        selected: 'Selected'\
+                    \},\
+                    actions: \{\
+                        upload: 'Upload Video',\
+                        next: 'Next',\
+                        clear_all: 'Clear All',\
+                        log_out: 'Log Out'\
+                    \},\
+                    local: \{\
+                        browse: 'Browse Files',\
+                        dd_title_single: 'Drag and Drop your video here',\
+                        dd_title_multi: 'Drag and Drop videos here',\
+                        drop_title_single: 'Drop your video to upload',\
+                        drop_title_multi: 'Drop videos to upload'\
+                    \}\
+                \}\
+            \}\
+        \}, (error, result) => \{\
+            if (!error && result && result.event === "success") \{\
+                uploadedVideoUrl = result.info.secure_url;\
+                showStatus('Video uploaded successfully! \uc0\u55356 \u57225 ', 'success');\
+                showVideoPreview(uploadedVideoUrl);\
+            \} else if (error) \{\
+                showStatus('Upload failed. Please try again.', 'error');\
+                console.error('Upload error:', error);\
+            \}\
+        \});\
+\
+        // Open widget when button is clicked\
+        document.getElementById("upload_widget").addEventListener("click", function()\{\
+            showStatus('Choose your video...', 'uploading');\
+            myWidget.open();\
+        \}, false);\
+\
+        function showStatus(message, type) \{\
+            const status = document.getElementById('status');\
+            status.textContent = message;\
+            status.className = `status $\{type\}`;\
+            status.style.display = 'block';\
+        \}\
+\
+        function showVideoPreview(videoUrl) \{\
+            const preview = document.getElementById('video-preview');\
+            const video = document.getElementById('preview-video');\
+            const continueBtn = document.getElementById('continue-btn');\
+            \
+            video.src = videoUrl;\
+            preview.style.display = 'block';\
+            continueBtn.style.display = 'inline-block';\
+        \}\
+\
+        // Handle continue button click\
+        document.getElementById('continue-btn').addEventListener('click', function() \{\
+            if (uploadedVideoUrl) \{\
+                // For mobile apps, you can post a message back to the parent\
+                if (window.parent) \{\
+                    window.parent.postMessage(\{\
+                        type: 'VIDEO_UPLOADED',\
+                        videoUrl: uploadedVideoUrl\
+                    \}, '*');\
+                \}\
+                \
+                // For web view, you can store in localStorage\
+                if (typeof(Storage) !== "undefined") \{\
+                    localStorage.setItem('mirrorMeVideoUrl', uploadedVideoUrl);\
+                \}\
+                \
+                // Show completion message\
+                showStatus('Video ready for analysis! Returning to app...', 'success');\
+                \
+                // For Thunkable, we'll redirect back or close\
+                setTimeout(() => \{\
+                    window.history.back();\
+                \}, 2000);\
+            \}\
+        \});\
+\
+        // Show initial message\
+        console.log('MirrorMe Video Upload Widget Loaded');\
+    </script>\
+</body>\
+</html>}
