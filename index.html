@@ -40,7 +40,7 @@
             font-size: 16px;
         }
         
-        .record-btn, .upload-btn, .confirm-btn {
+        .record-btn, .upload-btn {
             color: white;
             border: none;
             padding: 18px 36px;
@@ -64,12 +64,7 @@
             box-shadow: 0 4px 15px rgba(116,185,255,0.3);
         }
         
-        .confirm-btn {
-            background: linear-gradient(135deg, #00b894, #00a085);
-            box-shadow: 0 4px 15px rgba(0,184,148,0.3);
-        }
-        
-        .record-btn:hover, .upload-btn:hover, .confirm-btn:hover {
+        .record-btn:hover, .upload-btn:hover {
             transform: translateY(-2px);
         }
         
@@ -129,28 +124,6 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
         
-        .retake-btn {
-            background: transparent;
-            color: #666;
-            border: 2px solid #ddd;
-            padding: 12px 24px;
-            border-radius: 50px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-        }
-        
-        .retake-btn:hover {
-            border-color: #6366f1;
-            color: #6366f1;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
         #video-input, #file-input {
             display: none;
         }
@@ -158,7 +131,7 @@
 </head>
 <body>
     <div class="recording-container">
-        <div class="logo"></div>
+        <div class="logo">🎬 MirrorMe</div>
         <div class="subtitle" id="subtitle">Ready to capture your video?</div>
         
         <div id="recording-options">
@@ -264,13 +237,8 @@
                     showVideoPreview(currentVideoUrl);
                     showStatus('✅ Video ready! Use Continue button in app.', 'success');
                     
-                    // Automatically send VIDEO_READY message to Thunkable
-                    sendMessageToParent('VIDEO_READY', {
-                        videoUrl: currentVideoUrl,
-                        videoData: currentVideoData,
-                        duration: currentVideoData.duration || 0,
-                        publicId: currentVideoData.public_id
-                    });
+                    // Simple message to Thunkable
+                    sendMessageToThunkable();
                 } else {
                     throw new Error('Upload failed');
                 }
@@ -280,23 +248,25 @@
             }
         }
 
-        // Message to parent (Thunkable)
-        function sendMessageToParent(messageType, data = {}) {
-    const message = {
-        type: messageType,
-        recordingType: getRecordingType(),
-        timestamp: new Date().toISOString(),
-        ...data
-    };
-    
-    console.log('Sending message to parent:', message);
-    
-    // Try multiple message formats for compatibility
-    if (window.parent && window.parent !== window) {
-        window.parent.postMessage(JSON.stringify(message), '*');
-        window.parent.postMessage(message, '*');
-    }
-}
+        // Simple message function for Thunkable
+        function sendMessageToThunkable() {
+            const message = {
+                type: 'VIDEO_READY',
+                videoUrl: currentVideoUrl,
+                duration: currentVideoData.duration || 0,
+                recordingType: getRecordingType()
+            };
+            
+            console.log('Sending to Thunkable:', message);
+            
+            // Try sending message
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+            }
+            
+            // Change URL as backup signal
+            window.location.hash = '#video_ready';
+        }
 
         // Event Listeners
         document.getElementById('record-btn').addEventListener('click', function() {
@@ -325,25 +295,10 @@
             }
         });
 
-
-
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateSubtitle();
-            
-            // Let parent know the recording screen is ready
-            sendMessageToParent('RECORDING_SCREEN_READY');
-        });
-
-        // Listen for messages from parent
-        window.addEventListener('message', function(event) {
-            console.log('Received message from parent:', event.data);
-            
-            if (event.data.type === 'START_RECORDING') {
-                document.getElementById('record-btn').click();
-            } else if (event.data.type === 'START_UPLOAD') {
-                document.getElementById('upload-btn').click();
-            }
+            console.log('MirrorMe recording page loaded');
         });
     </script>
 </body>
