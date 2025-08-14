@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MirrorMe - Record Video</title>
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -41,8 +40,7 @@
             font-size: 16px;
         }
         
-        .record-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        .record-btn, .upload-btn, .confirm-btn {
             color: white;
             border: none;
             padding: 18px 36px;
@@ -52,31 +50,27 @@
             cursor: pointer;
             transition: all 0.3s ease;
             margin: 10px;
-            box-shadow: 0 4px 15px rgba(255,107,107,0.3);
+            width: 80%;
+            max-width: 300px;
         }
         
-        .record-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+        .record-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            box-shadow: 0 4px 15px rgba(255,107,107,0.3);
         }
         
         .upload-btn {
             background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white;
-            border: none;
-            padding: 18px 36px;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
             box-shadow: 0 4px 15px rgba(116,185,255,0.3);
         }
         
-        .upload-btn:hover {
+        .confirm-btn {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            box-shadow: 0 4px 15px rgba(0,184,148,0.3);
+        }
+        
+        .record-btn:hover, .upload-btn:hover, .confirm-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(116,185,255,0.4);
         }
         
         .btn:disabled {
@@ -116,6 +110,12 @@
             border: 1px solid #ef4444;
         }
         
+        .status.processing {
+            background: #dbeafe;
+            color: #2563eb;
+            border: 1px solid #3b82f6;
+        }
+        
         .video-preview {
             margin-top: 20px;
             display: none;
@@ -127,25 +127,6 @@
             border-radius: 12px;
             margin-bottom: 15px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .confirm-btn {
-            background: linear-gradient(135deg, #00b894, #00a085);
-            color: white;
-            border: none;
-            padding: 16px 32px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-            box-shadow: 0 4px 15px rgba(0,184,148,0.3);
-        }
-        
-        .confirm-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,184,148,0.4);
         }
         
         .retake-btn {
@@ -165,11 +146,19 @@
             border-color: #6366f1;
             color: #6366f1;
         }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #video-input, #file-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="recording-container">
-        <div class="logo">🎬 MirrorMe Now</div>
+        <div class="logo">🎬 MirrorMe</div>
         <div class="subtitle" id="subtitle">Ready to capture your video?</div>
         
         <div id="recording-options">
@@ -202,6 +191,10 @@
                 </button>
             </div>
         </div>
+        
+        <!-- Hidden inputs for mobile compatibility -->
+        <input type="file" id="video-input" accept="video/*" capture="user">
+        <input type="file" id="file-input" accept="video/*">
     </div>
 
     <script>
@@ -226,49 +219,8 @@
             subtitleElement.textContent = subtitles[type] || 'Ready to capture your video?';
         }
 
-        // Initialize Cloudinary upload widget
-        let uploadWidget;
         let currentVideoUrl = null;
         let currentVideoData = null;
-
-        function initializeCloudinary() {
-    uploadWidget = cloudinary.createUploadWidget({
-        cloudName: 'dtghpvpxc', 
-        uploadPreset: 'mirrorme_videos',
-        sources: ['camera', 'local'],
-        multiple: false,
-        resourceType: 'video',
-        cameraOptions: {
-            facingMode: 'user'
-        },
-        clientAllowedFormats: ['mp4', 'mov', 'avi', 'wmv', 'webm'],
-        maxFileSize: 100000000, // 100MB
-        maxVideoDuration: 120, // 2 minutes
-        showAdvancedOptions: false,
-        cropping: false,
-        showPoweredBy: false,
-        showUploadMoreButton: false,
-        showSkipCropButton: false,
-        theme: 'minimal',
-        folder: 'mirrorme-videos',
-        publicId: `video_${Date.now()}`,
-        eager: [
-            { quality: "auto", fetch_format: "auto" }
-        ]
-    }, (error, result) => {
-        if (!error && result && result.event === "success") {
-            console.log('Video uploaded successfully:', result.info);
-            currentVideoUrl = result.info.secure_url;
-            currentVideoData = result.info;
-            
-            showVideoPreview(currentVideoUrl);
-            showStatus('✅ Video uploaded successfully!', 'success');
-        } else if (error) {
-            console.error('Upload error:', error);
-            showStatus('❌ Upload failed. Please try again.', 'error');
-        }
-    });
-}
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
@@ -297,6 +249,37 @@
             currentVideoData = null;
         }
 
+        // Upload to Cloudinary
+        async function uploadToCloudinary(file) {
+            showStatus('📤 Uploading video...', 'processing');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', 'mirrorme_videos');
+            formData.append('cloud_name', 'dtghpvpxc');
+            
+            try {
+                const response = await fetch('https://api.cloudinary.com/v1_1/dtghpvpxc/video/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.secure_url) {
+                    currentVideoUrl = result.secure_url;
+                    currentVideoData = result;
+                    showVideoPreview(currentVideoUrl);
+                    showStatus('✅ Video uploaded successfully!', 'success');
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showStatus('❌ Upload failed. Please try again.', 'error');
+            }
+        }
+
         // Message to parent (Thunkable)
         function sendMessageToParent(messageType, data = {}) {
             const message = {
@@ -313,7 +296,7 @@
                 window.parent.postMessage(message, '*');
             }
             
-            // For testing - you can remove this
+            // For testing
             if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify(message));
             }
@@ -322,12 +305,28 @@
         // Event Listeners
         document.getElementById('record-btn').addEventListener('click', function() {
             showStatus('📹 Opening camera...', 'processing');
-            uploadWidget.open('camera');
+            document.getElementById('video-input').click();
         });
 
         document.getElementById('upload-btn').addEventListener('click', function() {
             showStatus('📁 Select video file...', 'processing');
-            uploadWidget.open('local');
+            document.getElementById('file-input').click();
+        });
+
+        // Handle video recording
+        document.getElementById('video-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadToCloudinary(file);
+            }
+        });
+
+        // Handle video upload
+        document.getElementById('file-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadToCloudinary(file);
+            }
         });
 
         document.getElementById('confirm-btn').addEventListener('click', function() {
@@ -360,7 +359,6 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateSubtitle();
-            initializeCloudinary();
             
             // Let parent know the recording screen is ready
             sendMessageToParent('RECORDING_SCREEN_READY');
